@@ -60,8 +60,19 @@ Fit lasso for several lambdas
 ```{r}
 lambda = 10^seq(-2,2.75, by = 0.1)
 
+
+lasso_cv = 
+  cv.glmnet(x = x, y = y, lambda = lambda)
+
+lasso_cv |> broom::tidy() |> 
+  ggplot(aes(x = log(lambda, 10), y = estimate)) +
+  geom_point()
+
+lambda_opt = lasso_cv[["lambda.min"]]
+
 lasso_fit = 
   glmnet(x = x, y = y, lambda = lambda)
+
 ```
 
 Usual lasso plot
@@ -71,8 +82,70 @@ lasso_fit |>
   broom::tidy() |> 
   filter(term != "(Intercept)") |> 
   select(term, lambda, estimate) |> 
-  complete(term, lambda, fill = list(estimate = 0)) |> view()
+  complete(term, lambda, fill = list(estimate = 0)) |> 
   ggplot(aes(x = lambda, y = estimate, group = term, color = term)) +
+  geom_vline(xintercept = lambda_opt, color = "blue", size = 1.2) +
   geom_line()
 ```
 
+```{r}
+final_lasso_fit = 
+  glmnet(x, y, lambda = lambda_opt)
+
+final_lasso_fit |> broom::tidy()
+```
+
+## Cluster pokemons
+
+
+
+```{r}
+pokemon_df = 
+  read_csv("data/pokemon.csv") |> 
+  janitor::clean_names() |> 
+  select(hp, speed)
+```
+
+
+```{r}
+pokemon_df |> 
+  ggplot(aes(x = hp, y = speed)) +
+  geom_point()
+```
+
+Let's use kmeans to cluster these pokemon!!
+
+```{r}
+kmeans_fit = 
+  kmeans(x = pokemon_df, centers = 3)
+```
+
+Can I plot these results
+
+```{r}
+pokemon_df =
+  pokemon_df |> 
+  broom::augment(kmeans_fit, data = _)
+```
+
+```{r}
+pokemon_df |> 
+  ggplot(aes(x = hp, y = speed, color = .cluster)) +
+  geom_point()
+```
+
+
+
+
+```{r}
+kmeans_fit = 
+  kmeans(x = pokemon_df, centers = 2)
+
+pokemon_df =
+  pokemon_df |> 
+  broom::augment(kmeans_fit, data = _)
+  
+pokemon_df |> 
+  ggplot(aes(x = hp, y = speed, color = .cluster)) +
+  geom_point()  
+```
