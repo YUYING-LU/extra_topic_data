@@ -1,0 +1,78 @@
+---
+title: "extra_topic_data"
+author: "Yuying Lu"
+date: "2024-11-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+```
+
+## Try Lasso
+
+
+import and clean birthweight data
+
+```{r}
+bwt_df = 
+  read_csv("data/birthweight.csv") |> 
+  mutate(
+    babysex = 
+          case_match(babysex,
+                     1 ~ "male",
+                     2 ~ "female"),
+    babysex = fct_infreq(babysex),
+    frace = 
+          case_match(frace,
+              1 ~ "white",
+              2 ~ "black", 
+              3 ~ "asian", 
+              4 ~ "puerto rican", 
+              8 ~ "other"),
+    frace = fct_infreq(frace),
+    mrace = 
+        case_match(mrace,
+            1 ~ "white",
+            2 ~ "black", 
+            3 ~ "asian", 
+            4 ~ "puerto rican",
+            8 ~ "other"),
+    mrace = fct_infreq(mrace),
+    malform = as.logical(malform))|> 
+  sample_n(200)
+    
+  
+  
+```
+
+Construct inputs for `glmnet`
+
+```{r}
+x = model.matrix(bwt ~ ., data = bwt_df)[,-1]
+y = bwt_df |> pull(bwt)
+```
+
+Fit lasso for several lambdas
+
+```{r}
+lambda = 10^seq(-2,2.75, by = 0.1)
+
+lasso_fit = 
+  glmnet(x = x, y = y, lambda = lambda)
+```
+
+Usual lasso plot
+
+```{r}
+lasso_fit |> 
+  broom::tidy() |> 
+  filter(term != "(Intercept)") |> 
+  select(term, lambda, estimate) |> 
+  complete(term, lambda, fill = list(estimate = 0)) |> view()
+  ggplot(aes(x = lambda, y = estimate, group = term, color = term)) +
+  geom_line()
+```
+
